@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "12749723193953708263"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for deployment. Defaults to the resource group location."
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "test",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name for the deployment."
+      }
+    }
+  },
+  "variables": {
+    "commonTags": {
+      "environment": "[parameters('environmentName')]",
+      "managedBy": "bicep",
+      "workload": "monitoring"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "name": "[format('law-{0}-{1}', parameters('environmentName'), uniqueString(resourceGroup().id))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "retentionInDays": 30,
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        }
+      },
+      "sku": {
+        "name": "PerGB2018"
+      },
+      "tags": "[variables('commonTags')]"
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[format('cae-{0}-{1}', parameters('environmentName'), uniqueString(resourceGroup().id))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('law-{0}-{1}', parameters('environmentName'), uniqueString(resourceGroup().id))), '2022-10-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('law-{0}-{1}', parameters('environmentName'), uniqueString(resourceGroup().id))), '2022-10-01').primarySharedKey]"
+          }
+        }
+      },
+      "tags": "[variables('commonTags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-{0}-{1}', parameters('environmentName'), uniqueString(resourceGroup().id)))]"
+      ]
+    }
+  ]
+}
