@@ -6,3 +6,5 @@ dotnet restore src/GenAIDevOps.sln
 
 echo "==> Building"
 dotnet build src/GenAIDevOps.sln
+
+##test
